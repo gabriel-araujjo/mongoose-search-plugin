@@ -15,7 +15,8 @@ var TestModelSchema = mongoose.Schema({
 });
 
 TestModelSchema.plugin(plugin, {
-	fields: ['title', 'description', 'tags']
+	fields: ['title', 'description', 'tags'],
+	stemmer: "RslpStemmer"
 });
 
 mongoose.model('TestModel', TestModelSchema);

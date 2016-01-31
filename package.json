@@ -4,11 +4,11 @@
   "description": "mongoose full-text search plugin",
   "repository": {
     "type": "git",
-    "url": "git://github.com/freakycue/mongoose-search-plugin"
+    "url": "git://github.com/gabriel-araujjo/mongoose-search-plugin"
   },
   "main": "index.js",
   "scripts": {
-    "test": "mocha test/index.js"
+    "test": "NODE_ENV=test mocha test/index.js"
   },
   "keywords": [
     "mongoose",
@@ -20,12 +20,12 @@
   "author": "Pavel Vlasov <freakycue@gmail.com>",
   "license": "MIT",
   "dependencies": {
-    "natural": "~0.1.25",
+    "natural": "gabriel-araujjo/natural",
     "underscore": "~1.5.2"
   },
   "devDependencies": {
     "mocha": "~1.17.1",
     "expect.js": "~0.2.0",
-    "mongoose": "~3.8.6"
+    "mongoose": "~4.2.8"
   }
 }

@@ -11,13 +11,13 @@ var TestModel = mongoose.model('TestModel'),
 
 describe('search plugin', function() {
 	var raw = {
-		title: 'the object to search.',
-		description: 'You have to search this object.',
-		tags: ['object', 'to', 'search', 'challenges']
+		title: 'O objeto a ser procurado.',
+		description: 'Você tem de procurar esse objeto.',
+		tags: ['objeto', 'para', 'procurar', 'desafio']
 	};
 
 	it('connect to db', function() {
-		mongoose.connect('mongodb://127.0.0.1:27017/test');
+		mongoose.connect('mongodb://localhost/test');
 	});
 
 	it('clear test collection', function(done) {
@@ -31,15 +31,15 @@ describe('search plugin', function() {
 
 	it('save another object', function(done) {
 		var obj = new TestModel({
-			title: 'another one object',
-			description: 'You have to find this one too.',
-			tags: ['another', 'object', 'to', 'find']
+			title: 'outro objeto',
+			description: 'Você tem de achar este aqui também.',
+			tags: ['outro', 'objeto', 'para', 'achar']
 		});
 		obj.save(done);
 	});
 
 	it('search should return both objects', function(done) {
-		TestModel.search('object', null, null, function(err, data) {
+		TestModel.search('objeto', null, null, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results).to.be.ok();
 			expect(data.results.length).to.be.ok();
@@ -50,7 +50,7 @@ describe('search plugin', function() {
 	});
 
 	it('search should return first object', function(done) {
-		TestModel.search('search', null, null, function(err, data) {
+		TestModel.search('procurando', null, null, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results).to.be.ok();
 			expect(data.results.length).to.be.ok();
@@ -61,7 +61,7 @@ describe('search plugin', function() {
 	});
 
 	it('search should return second object', function(done) {
-		TestModel.search('find', null, null, function(err, data) {
+		TestModel.search('achado', null, null, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results).to.be.ok();
 			expect(data.results.length).to.be.ok();
@@ -95,7 +95,7 @@ describe('search plugin', function() {
 
 	var allCount;
 	it('search all objects with outfields', function(done) {
-		TestModel.search('object', {title: 0}, function(err, data) {
+		TestModel.search('objeto', {title: 0}, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results[0].title).not.to.be.ok();
 
@@ -105,37 +105,37 @@ describe('search plugin', function() {
 	});
 
 	it('search with limit option', function(done) {
-		TestModel.search('object', null, {limit: 3}, function(err, data) {
+		TestModel.search('objeto', null, {limit: 3}, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results.length).to.equal(3);
-			expect(data.totalCount).to.equal(allCount)
+			expect(data.totalCount).to.equal(allCount);
 
 			done(err);
 		});
 	});
 
 	it('search with skip option', function(done) {
-		TestModel.search('object', null, {skip: 2}, function(err, data) {
+		TestModel.search('objeto', null, {skip: 2}, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results.length).to.equal(allCount - 2);
-			expect(data.totalCount).to.equal(allCount)
+			expect(data.totalCount).to.equal(allCount);
 
 			done(err);
 		});
 	});
 
 	it('search with limit and skip option', function(done) {
-		TestModel.search('object', null, {skip: 2, limit: 2}, function(err, data) {
+		TestModel.search('objeto', null, {skip: 2, limit: 2}, function(err, data) {
 			expect(err).not.to.be.ok();
 			expect(data.results.length).to.equal(2);
-			expect(data.totalCount).to.equal(allCount)
+			expect(data.totalCount).to.equal(allCount);
 
 			done(err);
 		});
 	});
 
 	it('search with sort option', function(done) {
-		TestModel.search('object', null, {sort: {index: 1}}, function(err, data) {
+		TestModel.search('objeto', null, {sort: {index: 1}}, function(err, data) {
 			var min = data.results[0].index;
 			expect(_(data.results).all(function(item) {
 				var res = item.index >= min;
@@ -147,7 +147,7 @@ describe('search plugin', function() {
 	});
 
 	it('search with conditions option', function(done) {
-		TestModel.search('object', null, {
+		TestModel.search('objeto', null, {
 			conditions: {index: {$gt: 50}}
 		}, function(err, data) {
 			expect(_(data.results).all(function(item) {
@@ -160,24 +160,24 @@ describe('search plugin', function() {
 	var embedded;
 	it('create document embedded document', function(done) {
 		embedded = new EmbeddedTestModel({
-			title: 'embedded',
-			description: 'embedded'
+			title: 'incorporado',
+			description: 'incorporado'
 		});
 		embedded.save(done);
 	});
 
 	it('create document with ref option', function(done) {
 		var obj = new TestModel({
-			title: 'with embedded',
-			description: 'with embedded',
-			tags: ['with', 'embedded'],
+			title: 'com incorporação',
+			description: 'com incorporação',
+			tags: ['com', 'incorporação'],
 			embedded: embedded._id 
 		});
 		obj.save(done);
 	});
 
 	it('search document with populate option', function(done) {
-		TestModel.search('embedded', null, {
+		TestModel.search('incorporado', null, {
 			populate: [{path: 'embedded'}]
 		}, function(err, data) {
 			expect(data.results.length).equal(1);
@@ -188,7 +188,7 @@ describe('search plugin', function() {
 
 	it('search document with populate option and fields options',
 	function(done) {
-		TestModel.search('embedded', null, {
+		TestModel.search('incorporado', null, {
 			populate: [{path: 'embedded', fields: {title: 0}}]
 		}, function(err, data) {
 			expect(data.results.length).equal(1);
