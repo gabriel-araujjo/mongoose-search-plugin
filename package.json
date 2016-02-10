@@ -21,7 +21,8 @@
   "license": "MIT",
   "dependencies": {
     "natural": "gabriel-araujjo/natural",
-    "underscore": "~1.5.2"
+    "underscore": "~1.5.2",
+    "json-stable-stringify": "~1.0.1"
   },
   "devDependencies": {
     "mocha": "~1.17.1",

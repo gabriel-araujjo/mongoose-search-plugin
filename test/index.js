@@ -7,7 +7,8 @@ var expect = require('expect.js'),
 require('./testModel');
 
 var TestModel = mongoose.model('TestModel'),
-	EmbeddedTestModel = mongoose.model('EmbeddedTestModel');
+	EmbeddedTestModel = mongoose.model('EmbeddedTestModel'),
+	SearchResultModel = mongoose.model('SearchResult');
 
 describe('search plugin', function() {
 	var raw = {
@@ -21,7 +22,9 @@ describe('search plugin', function() {
 	});
 
 	it('clear test collection', function(done) {
-		TestModel.remove({}, done);
+		TestModel.remove({}, function(){
+			SearchResultModel.remove({}, done);
+		});
 	});
 
 	it('save object', function(done) {
@@ -88,7 +91,8 @@ describe('search plugin', function() {
 			obj.save(function(err) {
 				expect(err).not.to.be.ok();
 
-				if (++inserted === len) done();
+				if (++inserted === len)
+					SearchResultModel.remove({}, done);
 			});
 		}
 	});
@@ -100,7 +104,7 @@ describe('search plugin', function() {
 			expect(data.results[0].title).not.to.be.ok();
 
 			allCount = data.results.length;
-			done(err);
+			done();
 		});
 	});
 

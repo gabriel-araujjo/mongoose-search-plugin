@@ -2,7 +2,21 @@
 
 var mongoose = require('mongoose'),
 	natural = require('natural'),
+    stringify = require('json-stable-stringify'),
 	_ = require('underscore');
+
+
+var searchResultScheme = mongoose.Schema({
+	__collection: String,
+	query: [String],
+    conditions: String,
+	results: [mongoose.Schema.Types.Mixed],
+	createdAt: {type: Date, default: Date.now, expires: 3600 }
+});
+
+searchResultScheme.index({collection: 1, searchString: 1});
+
+var SearchResult = mongoose.model('SearchResult', searchResultScheme);
 
 module.exports = function(schema, options) {
 	var stemmer = natural[options.stemmer || 'PorterStemmer'],
@@ -34,63 +48,120 @@ module.exports = function(schema, options) {
 
 		var self = this;
 		var tokens = _(stemmer.tokenizeAndStem(query)).unique(),
-			conditions = options.conditions || {},
-			outFields = {_id: 1},
-			findOptions = _(options).pick('sort');
+            findOptions = _(options).pick('sort');
 
-		conditions[keywordsPath] = {$in: tokens};
-		outFields[keywordsPath] = 1;
+        getSearchResult(tokens, findOptions, function(err, ids) {
+            if (err) return callback(err);
 
-		mongoose.Model.find.call(this, conditions, outFields, findOptions,
-		function(err, docs) {
-			if (err) return callback(err);
+            var totalCount = ids.length;
 
-			var totalCount = docs.length,
-				processMethod = options.sort ? 'map' : 'sortBy';
+            // slice results and find full objects by ids
+            if (options.limit || options.skip) {
+                options.skip = options.skip || 0;
+                options.limit = options.limit || (ids.length - options.skip);
+                ids = ids.slice(options.skip || 0, options.skip + options.limit);
+            }
 
-			// count relevance and sort results if sort option not defined
-			docs = _(docs)[processMethod](function(doc) {
-				var relevance = processRelevance(tokens, doc.get(keywordsPath));
-				doc.set(relevancePath, relevance);
-				return processMethod === 'map' ? doc : -relevance;
-			});
+            function processDocs(err, docs) {
+                if (err) return callback(err);
 
-			// slice results and find full objects by ids
-			if (options.limit || options.skip) {
-				options.skip = options.skip || 0;
-				options.limit = options.limit || (docs.length - options.skip);
-				docs = docs.slice(options.skip || 0, options.skip + options.limit);
-			}
+                var data = { totalCount : totalCount };
 
-			var docsHash = _(docs).indexBy('_id'),
-				findConditions = _({
-					_id: {$in: _(docs).pluck('_id')}
-				}).extend(options.conditions);
+                if (findOptions.sort) {
+                    data.results = docs;
+                } else {
+                    data.results = _(docs).sortBy(function(doc){
+                        return ids.indexOf(doc._id);
+                    });
+                }
 
-			var cursor = mongoose.Model.find
-			.call(self, findConditions, fields, findOptions);
+                callback(null, data);
+            }
 
-			// populate
-			if (options.populate) {
-				options.populate.forEach(function(object) {
-					cursor.populate(object.path, object.fields);
-				});
-			}
+            if (options.aggregate) {
 
-			cursor.exec(function(err, docs) {
-				if (err) return callback(err);
+                var aggregate = [
+                    { $match: { _id: { $in: ids } } },
+                    { $limit: ids.length }
+                ].concat(options.aggregate);
 
-				// sort result docs
-				callback(null, {
-					results: _(docs)[processMethod](function(doc) {
-						var relevance = docsHash[doc._id].get(relevancePath);
-						doc.set(relevancePath, relevance);
-						return processMethod === 'map' ? doc : -relevance;
-					}),
-					totalCount: totalCount
-				});
-			});
-		});
+                mongoose.Model.aggregate.call(self, aggregate, processDocs);
+            } else {
+                var findConditions = _({
+                    _id: {$in: ids}
+                }).extend(options.conditions);
+
+                var cursor = mongoose.Model.find
+                    .call(self, findConditions, fields, findOptions);
+
+                // populate
+                if (options.populate) {
+                    options.populate.forEach(function(object) {
+                        cursor.populate(object.path, object.fields);
+                    });
+                }
+                cursor.exec(processDocs);
+            }
+        });
+
+        function getSearchResult(tokens, findOptions, callback) {
+
+            var query = {
+                __collection: self.modelName,
+                query: tokens
+            };
+
+            if (options.conditions) {
+                query.conditions = stringify(options.conditions);
+            }
+
+            // Check cache
+            SearchResult.findOne(query,
+                function(err, doc) {
+                    if (err) return callback(err);
+                    if (doc) return callback(null, doc.results);
+
+                    // find and save result into cache if no cache entry was found
+                    findResult(tokens, findOptions, callback);
+                });
+        }
+
+        function findResult(tokens, findOptions, callback) {
+            var outFields = {_id: 1};
+            var conditions = options.conditions || {};
+
+            conditions[keywordsPath] = {$in: tokens};
+            outFields[keywordsPath] = 1;
+
+            mongoose.Model.find.call(self, conditions, outFields, findOptions,
+            function(err, docs) {
+                if (err) return callback(err);
+                if (!findOptions.sort) {
+                    docs = _(docs).sortBy(function(doc){
+                        var relevance = processRelevance(tokens, doc.get(keywordsPath));
+                        doc.set(relevancePath, relevance);
+                        return -relevance;
+                    });
+                }
+
+                var ids = _.pluck(docs, '_id');
+                var result = new SearchResult({
+                    __collection: self.modelName,
+                    query: tokens,
+                    results: ids
+                });
+
+                if (options.conditions) {
+                    result.conditions = stringify(options.conditions);
+                }
+
+                result.save(function(err) {
+                    if (err) return callback(err);
+                    callback(null, ids);
+                });
+            });
+
+        }
 
 		function processRelevance(queryTokens, resultTokens) {
 			var relevance = 0;
