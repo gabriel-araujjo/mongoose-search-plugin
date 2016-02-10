@@ -46,8 +46,9 @@ module.exports = function(schema, options) {
 			}
 		}
 
-		var self = this;
-		var tokens = _(stemmer.tokenizeAndStem(query)).unique(),
+        var self = this;
+
+		var tokens = query ? _(stemmer.tokenizeAndStem(query)).unique() : [],
             findOptions = _(options).pick('sort');
 
         getSearchResult(tokens, findOptions, function(err, ids) {
@@ -130,13 +131,16 @@ module.exports = function(schema, options) {
             var outFields = {_id: 1};
             var conditions = options.conditions || {};
 
-            conditions[keywordsPath] = {$in: tokens};
+            if (tokens.length > 0) {
+                conditions[keywordsPath] = {$in: tokens};
+            }
+
             outFields[keywordsPath] = 1;
 
             mongoose.Model.find.call(self, conditions, outFields, findOptions,
             function(err, docs) {
                 if (err) return callback(err);
-                if (!findOptions.sort) {
+                if (!findOptions.sort && tokens.length > 0) {
                     docs = _(docs).sortBy(function(doc){
                         var relevance = processRelevance(tokens, doc.get(keywordsPath));
                         doc.set(relevancePath, relevance);
