@@ -108,13 +108,12 @@ module.exports = function(schema, options) {
         function getSearchResult(tokens, findOptions, callback) {
 
             var query = {
-                __collection: self.modelName,
-                query: tokens
+				$and : [
+					{ __collection: self.modelName },
+					{ query: tokens },
+                    { conditions: options.conditions ? stringify(options.conditions) : null }
+				]
             };
-
-            if (options.conditions) {
-                query.conditions = stringify(options.conditions);
-            }
 
             // Check cache
             SearchResult.findOne(query,
