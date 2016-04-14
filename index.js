@@ -107,6 +107,9 @@ module.exports = function(schema, options) {
 
         function getSearchResult(tokens, findOptions, callback) {
 
+			if (options.skipSearchCache)
+				return findResult(tokens, findOptions, callback);
+
             var query = {
 				$and : [
 					{ __collection: self.modelName },
@@ -148,6 +151,10 @@ module.exports = function(schema, options) {
                 }
 
                 var ids = _.pluck(docs, '_id');
+
+				if (options.skipSearchCache)
+					return callback(null, ids);
+
                 var result = new SearchResult({
                     __collection: self.modelName,
                     query: tokens,
