@@ -23,7 +23,8 @@ module.exports = function(schema, options) {
 		distance = natural[options.distance || 'JaroWinklerDistance'],
 		fields = options.fields,
 		keywordsPath = options.keywordsPath || '_keywords',
-		relevancePath = options.relevancePath || '_relevance';
+		relevancePath = options.relevancePath || '_relevance',
+		forceKeyUpdateBeforeSave = !!options.forceKeyUpdateBeforeSave;
 
 	// init keywords field
 	var schemaMixin = {};
@@ -245,7 +246,7 @@ module.exports = function(schema, options) {
 	schema.pre('save', function(next) {
 		var self = this;
 
-	    var isChanged = this.isNew || fields.some(function (field) {
+	    var isChanged = forceKeyUpdateBeforeSave || this.isNew || fields.some(function (field) {
 	      return self.isModified(field);
 	    });
 
